@@ -38,7 +38,10 @@ namespace UnityEngine.Splines
         bool m_Capped = true;
 
         [SerializeField, Tooltip("The radius of the extruded mesh.")]
-        float m_Radius = .25f;
+        float m_StartRadius = .25f;
+        
+        [SerializeField, Tooltip("The radius of the extruded mesh.")]
+        float m_EndRadius = .1f;
 
         [SerializeField, Tooltip("The section of the Spline to extrude.")]
         Vector2 m_Range = new Vector2(0f, 1f);
@@ -119,14 +122,23 @@ namespace UnityEngine.Splines
 
         /// <summary>The radius of the extruded mesh.</summary>
         [Obsolete("Use Radius instead.", false)]
-        public float radius => Radius;
+        public float startRadius => StartRadius;
+        
+        public float endRadius => EndRadius;
 
         /// <summary>The radius of the extruded mesh.</summary>
-        public float Radius
+        public float StartRadius
         {
-            get => m_Radius;
-            set => m_Radius = Mathf.Max(value, .00001f);
+            get => m_StartRadius;
+            set => m_StartRadius = Mathf.Max(value, .00001f);
         }
+        
+        public float EndRadius
+        {
+            get => m_EndRadius;
+            set => m_EndRadius = Mathf.Max(value, .00001f);
+        }
+
 
         /// <summary>
         /// The section of the Spline to extrude.
@@ -223,7 +235,7 @@ namespace UnityEngine.Splines
             if((m_Mesh = GetComponent<MeshFilter>().sharedMesh) == null)
                 return;
             
-            SplineMesh.Extrude(Splines, m_Mesh, m_Radius, m_Sides, m_SegmentsPerUnit, m_Capped, m_Range);
+            SplineMesh.Extrude(Splines, m_Mesh, m_Sides, m_SegmentsPerUnit, m_Capped, m_Range, m_StartRadius, m_EndRadius);
             m_NextScheduledRebuild = Time.time + 1f / m_RebuildFrequency;
 
 #if UNITY_PHYSICS_MODULE

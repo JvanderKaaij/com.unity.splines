@@ -167,7 +167,7 @@ namespace UnityEditor.Splines
 
                 case EventType.Repaint:
                     var segments = SplineUtility.GetSubdivisionCount(spline.GetLength(), resolution);
-                    SplineMesh.Extrude(spline, m_Mesh, size, 8, segments, !spline.Closed);
+                    SplineMesh.Extrude(spline, m_Mesh, 8, segments, !spline.Closed, size, size);
                     var color = GUIUtility.hotControl == controlID
                         ? Handles.selectedColor
                         : HandleUtility.nearestControl == controlID

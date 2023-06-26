@@ -14,7 +14,8 @@ namespace UnityEditor.Splines
         SerializedProperty m_Sides;
         SerializedProperty m_SegmentsPerUnit;
         SerializedProperty m_Capped;
-        SerializedProperty m_Radius;
+        SerializedProperty m_StartRadius;
+        SerializedProperty m_EndRadius;
         SerializedProperty m_Range;
         SerializedProperty m_UpdateColliders;
 
@@ -41,7 +42,8 @@ namespace UnityEditor.Splines
             m_Sides = serializedObject.FindProperty("m_Sides");
             m_SegmentsPerUnit = serializedObject.FindProperty("m_SegmentsPerUnit");
             m_Capped = serializedObject.FindProperty("m_Capped");
-            m_Radius = serializedObject.FindProperty("m_Radius");
+            m_StartRadius = serializedObject.FindProperty("m_StartRadius");
+            m_EndRadius = serializedObject.FindProperty("m_EndRadius");
             m_Range = serializedObject.FindProperty("m_Range");
             m_UpdateColliders = serializedObject.FindProperty("m_UpdateColliders");
 
@@ -114,9 +116,14 @@ namespace UnityEditor.Splines
             EditorGUI.indentLevel++;
 
             EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(m_Radius);
+            EditorGUILayout.PropertyField(m_StartRadius);
             if(EditorGUI.EndChangeCheck())
-                m_Radius.floatValue = Mathf.Clamp(m_Radius.floatValue, .00001f, 1000f);
+                m_StartRadius.floatValue = Mathf.Clamp(m_StartRadius.floatValue, .00001f, 1000f);
+            
+            EditorGUI.BeginChangeCheck();
+            EditorGUILayout.PropertyField(m_EndRadius);
+            if(EditorGUI.EndChangeCheck())
+                m_EndRadius.floatValue = Mathf.Clamp(m_EndRadius.floatValue, .00001f, 1000f);
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(m_Sides, new GUIContent(k_ProfileEdges, m_Sides.tooltip));

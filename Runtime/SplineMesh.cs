@@ -96,16 +96,18 @@ namespace UnityEngine.Splines
             public bool capped { get; private set; }
             public bool closed { get; private set; }
             public float2 range { get; private set; }
-            public float radius { get; private set; }
+            public float startRadius { get; private set; }
+            public float endRadius { get; private set; }
 
-            public Settings(int sides, int segments, bool capped, bool closed, float2 range, float radius)
+            public Settings(int sides, int segments, bool capped, bool closed, float2 range, float startRadius, float endRadius)
             {
                 this.sides = math.clamp(sides, k_SidesMin, k_SidesMax);
                 this.segments = math.clamp(segments, k_SegmentsMin, k_SegmentsMax);
                 this.range = new float2(math.min(range.x, range.y), math.max(range.x, range.y));
                 this.closed = math.abs(1f - (this.range.y - this.range.x)) < float.Epsilon && closed;
                 this.capped = capped && !this.closed;
-                this.radius = math.clamp(radius, k_RadiusMin, k_RadiusMax);
+                this.startRadius = math.clamp(startRadius, k_RadiusMin, k_RadiusMax);
+                this.endRadius = math.clamp(endRadius, k_RadiusMin, k_RadiusMax);
             }
         }
 
@@ -125,7 +127,7 @@ namespace UnityEngine.Splines
         /// <param name="closed">Whether the extruded mesh is closed or open. This can be separate from the Spline.Closed value.</param>
         public static void GetVertexAndIndexCount(int sides, int segments, bool capped, bool closed, Vector2 range, out int vertexCount, out int indexCount)
         {
-            var settings = new Settings(sides, segments, capped, closed, range, 1f);
+            var settings = new Settings(sides, segments, capped, closed, range, 1f, 1f);
             GetVertexAndIndexCount(settings, out vertexCount, out indexCount);
         }
 
@@ -145,9 +147,9 @@ namespace UnityEngine.Splines
         /// <param name="segments">How many sections compose the length of the mesh.</param>
         /// <param name="capped">Whether the start and end of the mesh is filled. This setting is ignored when spline is closed.</param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        public static void Extrude<T>(T spline, Mesh mesh, float radius, int sides, int segments, bool capped = true) where T : ISpline
+        public static void Extrude<T>(T spline, Mesh mesh, int sides, int segments, bool capped, float startRadius, float endRadius) where T : ISpline
         {
-            Extrude(spline, mesh, radius, sides, segments, capped, new float2(0f, 1f));
+            Extrude(spline, mesh, sides, segments, capped, new float2(0f, 1f), startRadius, endRadius);
         }
 
         /// <summary>
@@ -164,9 +166,9 @@ namespace UnityEngine.Splines
         /// I.e., [0,1] is the entire Spline, whereas [.5, 1] is the last half of the Spline.
         /// </param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        public static void Extrude<T>(T spline, Mesh mesh, float radius, int sides, int segments, bool capped, float2 range) where T : ISpline
+        public static void Extrude<T>(T spline, Mesh mesh, int sides, int segments, bool capped, float2 range, float startRadius, float endRadius) where T : ISpline
         {
-            var settings = new Settings(sides, segments, capped, spline.Closed, range, radius);
+            var settings = new Settings(sides, segments, capped, spline.Closed, range, startRadius, endRadius);
             GetVertexAndIndexCount(settings, out var vertexCount, out var indexCount);
 
             var meshDataArray = Mesh.AllocateWritableMeshData(1);
@@ -181,12 +183,12 @@ namespace UnityEngine.Splines
             if (indexFormat == IndexFormat.UInt16)
             {
                 var indices = data.GetIndexData<UInt16>();
-                Extrude(spline, vertices, indices, radius, sides, segments, capped, range);
+                Extrude(spline, vertices, indices, sides, segments, capped, range, startRadius, endRadius);
             }
             else
             {
                 var indices = data.GetIndexData<UInt32>();
-                Extrude(spline, vertices, indices, radius, sides, segments, capped, range);
+                Extrude(spline, vertices, indices, sides, segments, capped, range, startRadius, endRadius);
             }
 
             mesh.Clear();
@@ -210,7 +212,7 @@ namespace UnityEngine.Splines
         /// I.e., [0,1] is the entire Spline, whereas [.5, 1] is the last half of the Spline.
         /// </param>
         /// <typeparam name="T">A type implementing ISpline.</typeparam>
-        public static void Extrude<T>(IReadOnlyList<T> splines, Mesh mesh, float radius, int sides, float segmentsPerUnit, bool capped, float2 range) where T : ISpline
+        public static void Extrude<T>(IReadOnlyList<T> splines, Mesh mesh, int sides, float segmentsPerUnit, bool capped, float2 range, float startRadius, float endRadius) where T : ISpline
         {
             mesh.Clear();
             var meshDataArray = Mesh.AllocateWritableMeshData(1);
@@ -227,7 +229,7 @@ namespace UnityEngine.Splines
                 var spline = splines[i];
                 
                 var segments = Mathf.Max((int)Mathf.Ceil(spline.GetLength() * span * segmentsPerUnit), 1);
-                settings[i] = new Settings(sides, segments, capped, spline.Closed, range, radius);
+                settings[i] = new Settings(sides, segments, capped, spline.Closed, range, startRadius, endRadius);
             
                 GetVertexAndIndexCount(settings[i], out var vertexCount, out var indexCount);
 
@@ -290,16 +292,17 @@ namespace UnityEngine.Splines
             TSplineType spline,
             NativeArray<TVertexType> vertices,
             NativeArray<TIndexType> indices,
-            float radius,
             int sides,
             int segments,
             bool capped,
-            float2 range)
+            float2 range,
+            float startRadius,
+            float endRadius)
             where TSplineType : ISpline
             where TVertexType : struct, ISplineVertexData
             where TIndexType : struct
         {
-            Extrude(spline, vertices, indices, new Settings(sides, segments, capped, spline.Closed, range, radius));
+            Extrude(spline, vertices, indices, new Settings(sides, segments, capped, spline.Closed, range, startRadius, endRadius));
         }
 
         static void Extrude<TSplineType, TVertexType, TIndexType>(
@@ -313,7 +316,9 @@ namespace UnityEngine.Splines
                 where TVertexType : struct, ISplineVertexData
                 where TIndexType : struct
         {
-            var radius = settings.radius;
+            var startRadius = settings.startRadius;
+            var endRadius = settings.endRadius;
+            
             var sides = settings.sides;
             var segments = settings.segments;
             var range = settings.range;
@@ -349,7 +354,17 @@ namespace UnityEngine.Splines
             }
 
             for (int i = 0; i < segments; ++i)
+            {
+                float parts;
+                if (segments > 1)
+                    parts = (float)i / (segments - 1);
+                else
+                    parts = 1;
+                
+                float stepRadius = (endRadius - startRadius) * parts;
+                float radius = startRadius + stepRadius;
                 ExtrudeRing(spline, math.lerp(range.x, range.y, i / (segments - 1f)), vertices, vertexArrayOffset + i * sides, sides, radius);
+            }
 
             if (capped)
             {
@@ -357,8 +372,8 @@ namespace UnityEngine.Splines
                 var endCapVertexStart = vertexArrayOffset + (segments + 1) * sides;
 
                 var rng = spline.Closed ? math.frac(range) : math.clamp(range, 0f, 1f);
-                ExtrudeRing(spline, rng.x, vertices, capVertexStart, sides, radius);
-                ExtrudeRing(spline, rng.y, vertices, endCapVertexStart, sides, radius);
+                ExtrudeRing(spline, rng.x, vertices, capVertexStart, sides, startRadius);
+                ExtrudeRing(spline, rng.y, vertices, endCapVertexStart, sides, endRadius);
 
                 var beginAccel = math.normalize(spline.EvaluateTangent(rng.x));
                 var accelLen = math.lengthsq(beginAccel);
